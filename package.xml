@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<package formate="2">
+	<name>uvic_rover</name>
+	<version>1.0.0</version>
+	<description>The ROS-UVic-Rover package</description>
+
+	<!-- One maintainer tag required, multiple allowed, one person per tag -->
+	<maintainer email="uvic.robotics@gmail.com">UVicRobotics</maintainer>
+
+	<!-- One license tag required, multiple allowed, one license per tag -->
+	<license>MIT</license>
+
+	<!-- No dependencies listed yet -->
+
+</package>
+
