@@ -1,0 +1,31 @@
+# Ignore Ros
+build/
+devel/
+logs/
+
+.catkin_workspace
+
+# Bag Files
+bags/
+
+# Python
+*.pyo
+*.pyc
+
+# Vim Autosaves
+*/*~
+
+# VSCode Files
+.dir-locals.el
+cmake-build-debug
+**/.vscode/
+**/.idea/
+cmake-build*/
+
+# CI/CD act library
+bin/
+
+# Emacs/Spacemacs Autosaves
+.#*
+.dir-locals.el
+
