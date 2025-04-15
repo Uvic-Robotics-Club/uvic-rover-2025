@@ -59,8 +59,9 @@ set(ROVER_CATKIN_PACKAGES
 find_package(catkin REQUIRED COMPONENTS
     ${ROVER_PACKAGES}
 )
-# Set up support for Python modules if you have any Python scripts that you want to install.
-catkin_python_setup()
+# Ucomment only if you're writing Python code that should be imported like a library, e.g.: from uvic_rover.nav import gps_utils
+# Note: requires a setup.py file to be preset.
+# catkin_python_setup()
 # ------------------------------------------------------------------------------
 # 4. Message Generation (Optional)
 # ------------------------------------------------------------------------------
