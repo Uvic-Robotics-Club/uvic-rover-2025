@@ -1,16 +1,30 @@
 <?xml version="1.0"?>
 <package format="2">
-	<name>uvic_rover</name>
-	<version>1.0.0</version>
-	<description>The ROS-UVic-Rover package</description>
-
-	<!-- One maintainer tag required, multiple allowed, one person per tag -->
-	<maintainer email="uvic.robotics@gmail.com">UVicRobotics</maintainer>
-
-	<!-- One license tag required, multiple allowed, one license per tag -->
-	<license>MIT</license>
-
-	<!-- No dependencies listed yet -->
-
+  <name>uvic_rover</name>
+  <version>1.0.0</version>
+  <description>The ROS-UVic-Rover package.</description>
+  
+  <!-- Required maintainer and license tags -->
+  <maintainer email="uvic.robotics@gmail.com">UVicRobotics</maintainer>
+  <license>MIT</license>
+  
+  <!-- Catkin build tool dependency -->
+  <buildtool_depend>catkin</buildtool_depend>
+  
+  <!-- Core dependencies required for compiling and running the nodes -->
+  <build_depend>roscpp</build_depend>
+  <build_depend>rospy</build_depend>
+  <build_depend>sensor_msgs</build_depend>
+  <build_depend>gps_common</build_depend>
+  <build_depend>robot_localization</build_depend>
+  
+  <!-- Runtime dependencies mirror the build dependencies -->
+  <exec_depend>roscpp</exec_depend>
+  <exec_depend>rospy</exec_depend>
+  <exec_depend>sensor_msgs</exec_depend>
+  <exec_depend>gps_common</exec_depend>
+  <exec_depend>robot_localization</exec_depend>
+  
+  <!-- The export tag is required even if left empty -->
+  <export></export>
 </package>
-
