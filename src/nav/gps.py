@@ -1,8 +1,4 @@
 #!/usr/bin/env python3
-
-# Simple GPS module demonstration.
-# Will wait for a fix and print a message every second with the current location
-# and other details.
 import time
 import adafruit_gps
 import rospy
