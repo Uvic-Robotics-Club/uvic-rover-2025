@@ -1,5 +1,5 @@
 <?xml version="1.0"?>
-<package formate="2">
+<package format="2">
 	<name>uvic_rover</name>
 	<version>1.0.0</version>
 	<description>The ROS-UVic-Rover package</description>
