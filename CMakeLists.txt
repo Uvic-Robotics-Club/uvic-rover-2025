@@ -107,7 +107,7 @@ include_directories(
 # ------------------------------------------------------------------------------
 # Install any Python scripts.
 # This makes them available as executable files when the package is built.
-#catkin_install_python(PROGRAMS
+catkin_install_python(PROGRAMS
      src/nav/gps.py
      src/nav/imu.py
      DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
