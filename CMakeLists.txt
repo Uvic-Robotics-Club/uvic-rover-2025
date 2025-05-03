@@ -59,8 +59,9 @@ set(ROVER_CATKIN_PACKAGES
 find_package(catkin REQUIRED COMPONENTS
     ${ROVER_PACKAGES}
 )
-# Set up support for Python modules if you have any Python scripts that you want to install.
-catkin_python_setup()
+# Ucomment only if you're writing Python code that should be imported like a library, e.g.: from uvic_rover.nav import gps_utils
+# Note: requires a setup.py file to be preset.
+# catkin_python_setup()
 # ------------------------------------------------------------------------------
 # 4. Message Generation (Optional)
 # ------------------------------------------------------------------------------
@@ -107,9 +108,9 @@ include_directories(
 # Install any Python scripts.
 # This makes them available as executable files when the package is built.
 catkin_install_python(PROGRAMS
-    src/nav/gps.py
-    src/nav/imu.py
-    DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+     src/nav/gps.py
+     src/nav/imu.py
+     DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 # Optionally, install your launch files so they can be run via roslaunch.
 install(DIRECTORY launch/
