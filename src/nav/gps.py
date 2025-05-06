@@ -5,7 +5,6 @@ import rospy
 from sensor_msgs.msg import NavSatFix
 from gps_common.msg import GPSFix
 import serial
-import serial
 import serial.tools.list_ports
 # Create a serial connection for the GPS connection using default speed and
 # a slightly higher timeout (GPS modules typically update once a second).
@@ -39,7 +38,7 @@ def main():
 
     common_pub = rospy.Publisher('/gps/fix_common', GPSFix, queue_size=10) 
     common_msg = GPSFix()
-    common_msg.header.frame_id = "gps_common_link"
+    common_msg.header.frame_id = "gps_link"
     common_msg.header.stamp = rospy.Time.now()
 
     rate = rospy.Rate(1)
