@@ -108,8 +108,8 @@ include_directories(
 # Install any Python scripts.
 # This makes them available as executable files when the package is built.
 catkin_install_python(PROGRAMS
-     src/nav/gps.py
-     src/nav/imu.py
+     scripts/odom/gps.py
+     scripts/odom/imu.py
      DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 # Optionally, install your launch files so they can be run via roslaunch.

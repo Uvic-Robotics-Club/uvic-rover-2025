@@ -38,7 +38,7 @@ def find_imu_port():
         # print(f"DEBUG: Device: {port.device}, VID: {port.vid}, PID: {port.pid}, Description: {port.description}")
         # Check if the port has the desired vendor and product ID
         if port.vid == 0x2341 and port.pid == 0x0043: # If a MPU9250 IMU (detects the arduino it's connected to)
-            print(f"IMU device found on {port.device}")
+            rospy.loginfo(f"IMU device found on {port.device}")
             return serial.Serial(port.device, baudrate=115200, timeout=0.1)
     rospy.logfatal("IMU device not found!")
     rospy.signal_shutdown("IMU device not found!")
@@ -103,9 +103,9 @@ def create_imu_msg(imu_data):
 
     return imu_msg
 
-def print_log(imu_data):
+def print_debug_info(imu_data):
     divider = "-" * 60
-    rospy.loginfo(
+    rospy.logdebug(
         f"\n{divider}\n"
         f"Accelerometer (m/s²): X = {imu_data.ax:.3f}, Y = {imu_data.ay:.3f}, Z = {imu_data.az:.3f}\n"
         f"Gyroscope (rad/s):    X = {imu_data.gx:.3f}, Y = {imu_data.gy:.3f}, Z = {imu_data.gz:.3f}\n"
@@ -153,7 +153,7 @@ def main():
             imu_data.gz = gz_raw * DEG_TO_RAD
 
             imu_pub.publish(create_imu_msg(imu_data))
-            print_log(imu_data)
+            print_debug_info(imu_data)
             rate.sleep()
 
         except serial.SerialException as e:

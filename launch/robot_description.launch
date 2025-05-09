@@ -1,8 +1,8 @@
 <launch>
   <!-- 1) Expand Xacro into the /robot_description param -->
   <param name="robot_description"
-         command="$(find xacro)/xacro --inorder \
-           '$(find uvic_rover)/urdf/rover.urdf.xacro'" />
+        command="$(find xacro)/xacro --inorder
+                  $(find uvic_rover)/urdf/rover.urdf.xacro" />
 
   <!-- 2) Publish all fixed joints as TF -->
   <node pkg="robot_state_publisher"
