@@ -1,167 +1,155 @@
 #!/usr/bin/env python3
+"""
+ROS node: /imu_talker
+Publishes : sensor_msgs/Imu on /imu/data
+"""
+
 import math
+import numpy as np
 import serial
 import serial.tools.list_ports
+from typing import Tuple
+from tf.transformations import euler_from_quaternion
+
 import rospy
 from sensor_msgs.msg import Imu
-import tf.transformations as tft
-from dataclasses import dataclass
 
-# Conversion factors
-G_TO_MS2 = 9.81
-DEG_TO_RAD = math.pi / 180
+# ───────── constants ─────────
+ARDUINO_VID   = 0x2341
+ARDUINO_PID   = 0x0043
+SERIAL_BAUD   = 115_200
+EXPECTED_FIELDS = 13
+DEFAULT_RATE_HZ = 50
 
-@dataclass
+# ───────── helper functions ─────────
+def _set_diag(matrix, var_xyz):
+    """Fill a 3×3 covariance array (row-major) with variances on the diagonal."""
+    matrix[:] = [var_xyz[0], 0.0,          0.0,
+                 0.0,        var_xyz[1],   0.0,
+                 0.0,        0.0,          var_xyz[2]]
+
+# ───────── lightweight data struct ─────────
 class ImuData:
-    ax: float = 0.0
-    ay: float = 0.0
-    az: float = 0.0
-    mx: float = 0.0
-    my: float = 0.0
-    mz: float = 0.0
-    gx: float = 0.0
-    gy: float = 0.0
-    gz: float = 0.0
-    qw: float = 0.0
-    qx: float = 0.0
-    qy: float = 0.0
-    qz: float = 0.0
-
-def shutdown_hook(ser_port):
-    rospy.loginfo("Shutting down IMU node...")
-    ser_port.close()
-
-def find_imu_port():
-    # Iterate over all available serial ports
-    ports = list(serial.tools.list_ports.comports())
-    for port in ports:
-        # print(f"DEBUG: Device: {port.device}, VID: {port.vid}, PID: {port.pid}, Description: {port.description}")
-        # Check if the port has the desired vendor and product ID
-        if port.vid == 0x2341 and port.pid == 0x0043: # If a MPU9250 IMU (detects the arduino it's connected to)
-            rospy.loginfo(f"IMU device found on {port.device}")
-            return serial.Serial(port.device, baudrate=115200, timeout=0.1)
-    rospy.logfatal("IMU device not found!")
-    rospy.signal_shutdown("IMU device not found!")
-    raise rospy.ROSInterruptException("IMU device not found!")
-
-def parse_serial_data(ser_port):
     """
-    Reads and parses the serial string into 9 float values.
-    Returns a tuple of floats if successful, otherwise None.
+    Fixed-layout container for one IMU sample.
+    Using __slots__ saves ~50 B per instance versus __dict__.
     """
-    try:
-        raw_ser = ser_port.readline().decode().strip()
-        if not raw_ser:
+    __slots__ = ("accel", "mag", "gyro", "quat")
+
+    def __init__(
+        self,
+        accel: Tuple[float, float, float] = (0.0, 0.0, 0.0),
+        mag:   Tuple[float, float, float] = (0.0, 0.0, 0.0),
+        gyro:  Tuple[float, float, float] = (0.0, 0.0, 0.0),
+        quat:  Tuple[float, float, float, float] = (0.0, 0.0, 0.0, 0.0),
+    ):
+        self.accel = accel
+        self.mag   = mag
+        self.gyro  = gyro
+        self.quat  = quat
+
+# ───────── node class ─────────
+class ImuNode:
+    def __init__(self, rate_hz: int = DEFAULT_RATE_HZ) -> None:
+        self._serial = self._open_port()
+        self._pub    = rospy.Publisher("/imu/data", Imu, queue_size=10)
+        self._rate   = rospy.Rate(rate_hz)
+        self._data   = ImuData()
+        rospy.on_shutdown(self._shutdown)
+        rospy.loginfo("IMU node initialised")
+
+    # ----- main loop -----
+    def spin(self) -> None:
+        while not rospy.is_shutdown():
+            try:
+                raw = self._read_raw_sample()
+                if raw:
+                    self._update_data(raw)
+                    self._pub.publish(self._build_msg())
+                #self._rate.sleep()
+            except serial.SerialException as err:
+                rospy.logerr_throttle(1.0, f"Serial error: {err}")
+
+    # ----- serial helpers -----
+    def _open_port(self):
+        for port in serial.tools.list_ports.comports():
+            if port.vid == ARDUINO_VID and port.pid == ARDUINO_PID:
+                rospy.loginfo(f"IMU detected on {port.device}")
+                return serial.Serial(port.device, SERIAL_BAUD, timeout=0.1)
+        rospy.logfatal("IMU device not found")
+        rospy.signal_shutdown("IMU device not found")
+        raise rospy.ROSInterruptException
+
+    def _read_raw_sample(self):
+        line = self._serial.readline().decode(errors="ignore").strip()
+        if not line:
             return None
-
-        parts = raw_ser.split()
-        if len(parts) != 13: # checks for x pieces of information
-            rospy.logwarn("Unexpected data length: %d", len(parts))
+        parts = line.split()
+        if len(parts) != EXPECTED_FIELDS:
+            rospy.logwarn_throttle(5.0,
+                                   f"Unexpected field count: {len(parts)} != {EXPECTED_FIELDS}")
             return None
-        return tuple(map(float, parts))
-    except ValueError as e:
-        rospy.logwarn("Error parsing data: %s", e)
-        return None
-
-# def create_quarternion(imu_data):
-#     """
-#     Computes roll, pitch, and yaw from accelerometer and magnetometer values,
-#     then converts these angles into a quaternion.
-#     Returns a tuple (qw, qx, qy, qz).
-#     """
-#     roll = math.atan2(imu_data.ay, imu_data.az)
-#     pitch = math.atan2(-imu_data.ax, math.sqrt(imu_data.ay**2 + imu_data.az**2))
-    
-#     mx_comp = imu_data.mx * math.cos(pitch) + imu_data.mz * math.sin(pitch)
-#     my_comp = (imu_data.mx * math.sin(roll) * math.sin(pitch) +
-#                imu_data.my * math.cos(roll) -
-#                imu_data.mz * math.sin(roll) * math.cos(pitch))
-#     yaw = math.atan2(-my_comp, mx_comp)
-    
-#     return tuple(tft.quaternion_from_euler(roll, pitch, yaw))
-
-def create_imu_msg(imu_data):
-    """
-    Creates and returns an Imu message populated with sensor values from imu_data.
-    """
-    imu_msg = Imu()
-    imu_msg.header.stamp = rospy.Time.now()
-    imu_msg.header.frame_id = "imu_link"
-
-    imu_msg.orientation.x = imu_data.qx
-    imu_msg.orientation.y = imu_data.qy
-    imu_msg.orientation.z = imu_data.qz
-    imu_msg.orientation.w = imu_data.qw
-
-    imu_msg.linear_acceleration.x = imu_data.ax
-    imu_msg.linear_acceleration.y = imu_data.ay
-    imu_msg.linear_acceleration.z = imu_data.az
-
-    imu_msg.angular_velocity.x = imu_data.gx
-    imu_msg.angular_velocity.y = imu_data.gy
-    imu_msg.angular_velocity.z = imu_data.gz
-
-    return imu_msg
-
-def print_debug_info(imu_data):
-    divider = "-" * 60
-    rospy.logdebug(
-        f"\n{divider}\n"
-        f"Accelerometer (m/s²): X = {imu_data.ax:.3f}, Y = {imu_data.ay:.3f}, Z = {imu_data.az:.3f}\n"
-        f"Gyroscope (rad/s):    X = {imu_data.gx:.3f}, Y = {imu_data.gy:.3f}, Z = {imu_data.gz:.3f}\n"
-        f"Quaternion:           W = {imu_data.qw:.3f}, X = {imu_data.qx:.3f}, "
-        f"Y = {imu_data.qy:.3f}, Z = {imu_data.qz:.3f}\n"
-        f"{divider}"
-    )
-
-def main():
-    rospy.init_node('imu_talker')
-    imu_pub = rospy.Publisher('/imu/data', Imu, queue_size=10)
-    rate = rospy.Rate(30)
-
-    # Open and configure the serial port.
-    ser_port = find_imu_port()
-    ser_port.reset_input_buffer()
-    rospy.on_shutdown(lambda: shutdown_hook(ser_port))
-
-    while not rospy.is_shutdown():
         try:
-            parsed_ser = parse_serial_data(ser_port)
-            imu_data = ImuData()
-            if parsed_ser is None:
-                continue
-              
-            ax_raw, \
-            ay_raw, \
-            az_raw, \
-            imu_data.mx, \
-            imu_data.my, \
-            imu_data.mz, \
-            gx_raw, \
-            gy_raw, \
-            gz_raw, \
-            imu_data.qw, \
-            imu_data.qx, \
-            imu_data.qy, \
-            imu_data.qz = parsed_ser 
+            return tuple(map(float, parts))
+        except ValueError:
+            rospy.logwarn_throttle(5.0, "Non-numeric data encountered")
+            return None
 
-            imu_data.ax = ax_raw * G_TO_MS2
-            imu_data.ay = ay_raw * G_TO_MS2
-            imu_data.az = az_raw * G_TO_MS2
-            imu_data.gx = gx_raw * DEG_TO_RAD
-            imu_data.gy = gy_raw * DEG_TO_RAD
-            imu_data.gz = gz_raw * DEG_TO_RAD
+    # ----- conversion -----
+    def _update_data(self, raw):
+        ax, ay, az, mx, my, mz, gx, gy, gz, qw, qx, qy, qz = raw
+        self._data = ImuData(
+            accel=(ax, ay, az),
+            mag=(mx, my, mz),
+            gyro=(gx, gy, gz),
+            quat=(qw, qx, qy, qz),
+        )
 
-            imu_pub.publish(create_imu_msg(imu_data))
-            print_debug_info(imu_data)
-            rate.sleep()
+    def _build_msg(self) -> Imu:
+        msg = Imu()
+        msg.header.stamp = rospy.Time.now()
+        msg.header.frame_id = "imu_link"
+        # orientation
+        msg.orientation.w, msg.orientation.x, msg.orientation.y, msg.orientation.z = self._data.quat
+        # linear accel
+        msg.linear_acceleration.x, msg.linear_acceleration.y, msg.linear_acceleration.z = self._data.accel
+        # angular vel
+        msg.angular_velocity.x, msg.angular_velocity.y, msg.angular_velocity.z = self._data.gyro
 
-        except serial.SerialException as e:
-            rospy.logerr("Serial port error: %s", e)
-        except Exception as e:
-            rospy.logerr("Unexpected error: %s", e)
+        #TEMP
+        yaw = euler_from_quaternion([msg.orientation.x,
+            msg.orientation.y,
+            msg.orientation.z,
+            msg.orientation.w])[2]
+        print(f"yaw (deg): {math.degrees(yaw):.1f}")
 
-if __name__ == '__main__':
+                # ====== covariance values (variance, not std-dev) ======
+        gyro_var   = [1.5e-6] * 3                      # rad²/s²
+        accel_var  = [8e-4]  * 3                      # (m/s²)²
+        ori_var    = [math.radians(2)**2,              # roll
+                    math.radians(2)**2,              # pitch
+                    math.radians(5)**2]              # yaw
+
+        _set_diag(msg.angular_velocity_covariance,    gyro_var)
+        _set_diag(msg.linear_acceleration_covariance, accel_var)
+        _set_diag(msg.orientation_covariance,         ori_var)
+
+        return msg
+
+    # ----- shutdown -----
+    def _shutdown(self):
+        rospy.loginfo("Closing IMU serial port")
+        try:
+            self._serial.close()
+        except Exception:
+            pass
+
+# ───────── entry point ─────────
+def main():
+    rospy.init_node("imu_talker")
+    ImuNode().spin()
+
+if __name__ == "__main__":
     try:
         main()
     except rospy.ROSInterruptException:
