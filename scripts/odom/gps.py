@@ -5,7 +5,6 @@ import rospy
 from sensor_msgs.msg import NavSatFix
 from gps_common.msg import GPSFix
 import serial
-import serial
 import serial.tools.list_ports
 # Create a serial connection for the GPS connection using default speed and
 # a slightly higher timeout (GPS modules typically update once a second).
@@ -22,7 +21,7 @@ def find_gps_port():
         #print(f"DEBUG: Device: {port.device}, VID: {port.vid}, PID: {port.pid}, Description: {port.description}")
         # Check if the port has the desired vendor and product ID
         if port.vid == 0x10c4 and port.pid == 0xea60: # If correct GPS
-            print(f"GPS device found on {port.device}")
+            rospy.loginfo(f"GPS device found on {port.device}")
             return serial.Serial(port.device, baudrate=9600, timeout=10)      
     rospy.logfatal("GPS device not found!")
     rospy.signal_shutdown("GPS device not found!")
@@ -39,7 +38,7 @@ def main():
 
     common_pub = rospy.Publisher('/gps/fix_common', GPSFix, queue_size=10) 
     common_msg = GPSFix()
-    common_msg.header.frame_id = "gps_common_link"
+    common_msg.header.frame_id = "gps_link"
     common_msg.header.stamp = rospy.Time.now()
 
     rate = rospy.Rate(1)
@@ -87,7 +86,7 @@ def main():
             last_print = current
             if not gps.has_fix:
                 # Try again if we don't have a fix yet.
-                print("Waiting for fix...")
+                rospy.logdebug("Waiting for fix...")
                 continue
             # We have a fix! (gps.has_fix is true)
             
@@ -107,8 +106,8 @@ def main():
             common_pub.publish(common_msg)
 
             # Print out details about the fix like location, date, etc.
-            print("=" * 40)  # Print a separator line.           
-            print(
+            rospy.logdebug("=" * 40)  # Print a separator line.           
+            rospy.logdebug(
             "Fix UTC timestamp: {}/{}/{} {:02}:{:02}:{:02}".format(
             gps.timestamp_utc.tm_mon,  # Grab parts of the time from the
             gps.timestamp_utc.tm_mday,  # struct_time object that holds
@@ -118,14 +117,14 @@ def main():
             gps.timestamp_utc.tm_sec,
                 )
             )
-            print("Latitude: {0:.6f} degrees".format(gps.latitude))
-            print("Longitude: {0:.6f} degrees".format(gps.longitude))
-            print(
+            rospy.logdebug("Latitude: {0:.6f} degrees".format(gps.latitude))
+            rospy.logdebug("Longitude: {0:.6f} degrees".format(gps.longitude))
+            rospy.logdebug(
                 "Precise Latitude: {:2.0f}{:2.4f} degrees".format(
                     gps.latitude_degrees, gps.latitude_minutes
                 )
             )
-            print(
+            rospy.logdebug(
                 "Precise Longitude: {:2.0f}{:2.4f} degrees".format(
                     gps.longitude_degrees, gps.longitude_minutes
                 )
