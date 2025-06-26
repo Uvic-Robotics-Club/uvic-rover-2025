@@ -1,0 +1,6 @@
+<!-- launch/master.launch -->
+<launch>
+  <!-- Launch ZED2i -->
+  <include file="$(find uvic_rover)/launch/zed.launch"/>
+
+</launch>
