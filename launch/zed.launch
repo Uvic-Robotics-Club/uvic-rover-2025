@@ -1,0 +1,8 @@
+<!-- launch/zed.launch -->
+<launch>
+    <!-- Launch ZED2i -->
+    <include file="$(find zed_wrapper)/launch/zed2i.launch"/>
+
+    <!-- ArUco Detector -->
+    <node pkg="uvic_rover" type="aruco_detector.py" name="aruco_detector" output="screen" respawn="true"/>
+</launch>
