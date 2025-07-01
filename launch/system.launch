@@ -1,0 +1,21 @@
+<!-- launch/system.launch -->
+<launch>
+    <!-- Sensors -->
+    <node pkg="uvic_rover" type="imu.py" name="imu_node" output="screen"/>
+    <node pkg="uvic_rover" type="gps.py" name="gps_node" output="screen"/>
+
+    <!-- Description -->
+    <include file="$(find uvic_rover)/launch/robot_description.launch"/>
+
+    <!-- Localization -->
+    <include file="$(find uvic_rover)/launch/ekf_local.launch"/>
+    <include file="$(find uvic_rover)/launch/navsat_transform.launch"/>
+    <include file="$(find uvic_rover)/launch/ekf_global.launch"/>
+
+    <!-- Vision -->
+    <include file="$(find uvic_rover)/launch/zed.launch"/>
+
+    <!-- 6) (Optional) RViz -->
+    <!-- … -->
+
+</launch>

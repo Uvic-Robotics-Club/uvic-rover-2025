@@ -108,9 +108,9 @@ include_directories(
 # Install any Python scripts.
 # This makes them available as executable files when the package is built.
 catkin_install_python(PROGRAMS
-     src/uvic_rover/zed/aruco_detector.py
-     scripts/odom/gps.py
-     scripts/odom/imu.py
+     scripts/aruco_detector.py
+     src/uvic_rover/odom/gps.py
+     src/uvic_rover/odom/imu.py
      DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 # Optionally, install your launch files so they can be run via roslaunch.

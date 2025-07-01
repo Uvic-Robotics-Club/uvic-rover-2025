@@ -8,14 +8,6 @@ import cv2.aruco as aruco
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge, CvBridgeError
 
-from uvic_rover.utils.rover_logger import setup_logger
-
-
-# Set up logger for this node
-logger = setup_logger("aruco_logger", log_to_file=False, log_level=logging.INFO)
-
-logger.info(f"Starting aruco_detector.py")
-
 class ArucoDetector:
     """
     Subscribes to a ZED2 camera image stream and detects ArUco markers in the frame.
@@ -23,6 +15,8 @@ class ArucoDetector:
     """
 
     def __init__(self) -> None:
+        rospy.loginfo(f"Starting aruco_detector.py")
+
         # Conver ROS Image messages to OpenCV images
         self.bridge = CvBridge()
 
@@ -45,7 +39,7 @@ class ArucoDetector:
             # Convert incoming ROS image message to OpenCV format (BGR)
             frame = self.bridge.imgmsg_to_cv2(msg, desired_encoding="bgr8")
         except CvBridgeError as e:
-            logger.error(f"CV Bridge conversion failed: {e}")
+            rospy.logerr(f"CV Bridge conversion failed: {e}")
             return
 
         # Detect ArUco markers in the frame
@@ -78,7 +72,7 @@ class ArucoDetector:
                 cv2.putText(frame, str(marker_id), (topLeft[0], topLeft[1] - 10),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
                 
-                logger.info(f"Detected ArUco marker ID: {marker_id}")
+                rospy.loginfo(f"Detected ArUco marker ID: {marker_id}")
 
         # Display the annotated frame
         cv2.imshow("Aruco Detection", frame)
@@ -86,7 +80,6 @@ class ArucoDetector:
 
 if __name__ == '__main__':
     rospy.init_node('aruco_detector', anonymous=True)
-    logger.info("Logger is ready after ROS init.")
     
     # Instantiate the detector
     ad = ArucoDetector()
